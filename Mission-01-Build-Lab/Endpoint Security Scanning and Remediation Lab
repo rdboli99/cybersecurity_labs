@@ -1,1 +1,63 @@
+Executive Summary
+This project simulated a DevSecOps secret-auditing workflow on an Ubuntu Server host within a isolated home lab environment. 
+The objective was to implement automated scanning tools to identify exposed API credentials, debug scanner behavior, and establish remediation steps to prevent credential leaks in production environments.
+
+Key Components & Topology
+Host Platform: Linux Mint
+
+Target Environment: VirtualBox Ubuntu Server VM
+
+Connectivity: SSH over NAT with port forwarding (Host: 2222 -> Guest: 22)
+
+Target File: ~/ai_app/config.env containing simulated high-entropy API credentials
+
+Tooling Evaluated: TruffleHog (v3.97.4) and Gitleaks (v8.30.1)
+
+Workflow & Technical Execution
+Environment & Service Preparation
+
+Identified local server user accounts (rossdboli) and established non-root operational workflows.
+
+Installed and enabled the OpenSSH daemon (openssh-server), configuring UFW firewall rules (sudo ufw allow ssh) to expose port 22 inside the guest system.
+
+Secret Scanner Deployment
+
+Deployed TruffleHog v3 binary to /usr/local/bin using official install scripts.
+
+Compiled and installed Gitleaks directly via release binary downloads after identifying snap package limitations on the platform.
+
+Target File Provisioning
+
+Created a dedicated project directory (~/ai_app) and populated a mock configuration file (config.env) with structured, high-entropy test strings (e.g., sk-proj-...).
+
+
+
+Technical Challenges & Workarounds
+APT Frontend Database Locks: Resolved background updater collisions (unattended-upgr) by stopping systemctl services, terminating locked process IDs (kill -9 4233), and manually clearing /var/lib/dpkg/lock-frontend.
+
+TruffleHog Update Permission Errors: Handled elevated permission constraints by appending --no-update flags to bypass auto-updater routines.
+
+CLI Syntax & Argument Parsing Errors: Resolved TruffleHog lstat false errors caused by boolean flag positional parsing by enforcing strict command ordering (trufflehog --no-update --no-verification filesystem ~/ai_app).
+
+Active vs. Offline Scanner Validation:
+
+TruffleHog v3: Designed primarily for active API verification; suppressed unverified fake keys during offline execution.
+
+Gitleaks: Selected as the primary offline regex scanner (gitleaks dir ~/ai_app -v), successfully matching regex rules against high-entropy target keys.
+
+
+
+Findings & Detection Results
+Gitleaks successfully flagged the exposed credential with the following audit telemetry:
+
+Rule ID: generic-api-key
+
+Target File: /home/rossdboli/ai_app/config.env (Line 1)
+
+Entropy Score: 3.827406
+
+Fingerprint: /home/rossdboli/ai_app/config.env:generic-api-key:1
+
+
+
 
